@@ -60,7 +60,7 @@ at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the project team at `iabhnv19@gmail.com` (or the repository maintainers). All
+reported to the repository maintainers via GitHub issues. All
 complaints will be reviewed and investigated promptly and fairly.
 
 ## Attribution
