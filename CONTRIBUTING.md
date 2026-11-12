@@ -1,17 +1,17 @@
-# Contributing to Pulse ⚡
+# Contributing to Pulse
 
-First off, thank you for taking the time to contribute! 🎉 Pulse is an open-source Android system monitor and benchmarking tool, and we appreciate help from the community.
+First off, thank you for taking the time to contribute! Pulse is an open-source Android system monitor and benchmarking tool, and we appreciate help from the community.
 
 Please follow these guidelines to make contribution as smooth as possible.
 
 ---
 
-## 🧭 Code of Conduct
+## Code of Conduct
 By participating in this project, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ---
 
-## 🚀 How Can I Contribute?
+## How Can I Contribute?
 
 ### 1. Reporting Bugs
 * Check the [Issue Tracker](https://github.com/iabhnv19/Pulse/issues) to see if the bug has already been reported.
@@ -30,7 +30,7 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
 
 ---
 
-## 🛠️ Development Setup
+## Development Setup
 1. Open the project in **Android Studio** (Ladybug or newer recommended).
 2. Sync Gradle (`File > Sync Project with Gradle Files`).
 3. Run the app on an emulator or physical Android device (API 24+).
