@@ -1,0 +1,73 @@
+package com.example.taskmanager
+
+data class SystemStats(
+    val cpuUsage: Float,
+    val ramUsed: Long,
+    val ramTotal: Long,
+    val storageUsed: Long,
+    val storageTotal: Long,
+    val storageReadSpeed: Long,
+    val storageWriteSpeed: Long,
+    val gpuUsage3D: Float,
+    val gpuUsageCopy: Float,
+    val gpuUsageCompute: Float,
+    val gpuMemoryUsed: Long,
+    val gpuMemoryTotal: Long,
+    val networkSendSpeed: Long,
+    val networkReceiveSpeed: Long,
+    val ssid: String,
+    val ipv4: String,
+    val ipv6: String,
+    val signalStrength: Int,
+    val cpuSpeed: Float,
+    val processCount: Int,
+    val threadCount: Int,
+    val handleCount: Int,
+    val upTime: String,
+    val ramCompressed: Long,
+    val ramCommitted: Long,
+    val ramLimit: Long,
+    val ramCached: Long,
+    val ramPagedPool: Long,
+    val ramNonPagedPool: Long,
+    val gpuDedicatedUsed: Long,
+    val gpuDedicatedTotal: Long,
+    val gpuSharedUsed: Long,
+    val gpuSharedTotal: Long
+)
+
+data class DeviceSpecs(
+    val processorName: String,
+    val gpuName: String,
+    val totalRam: Long,
+    val totalStorage: Long,
+    val androidVersion: String,
+    val modelName: String,
+    val networkAdapterName: String,
+    val baseSpeed: String,
+    val sockets: Int,
+    val cores: Int,
+    val logicalProcessors: Int,
+    val virtualization: String,
+    val l1Cache: String,
+    val l2Cache: String,
+    val l3Cache: String,
+    val ramSpeed: String,
+    val ramSlots: String,
+    val ramFormFactor: String,
+    val ramHardwareReserved: String,
+    val gpuDriverVersion: String,
+    val gpuDriverDate: String,
+    val gpuVulkanVersion: String,
+    val gpuPhysicalLocation: String,
+    val gpuHardwareReserved: String
+)
+
+data class AppProcess(
+    val pid: Int,
+    val processName: String,
+    val packageName: String,
+    val memoryUsage: Long,
+    val cpuUsage: Float,
+    val lastUsed: Long = 0L      // epoch ms; populated from UsageStats
+)

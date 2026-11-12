@@ -1,0 +1,61 @@
+# Built application files
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Files for the Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+.gradle/
+build/
+
+# Local configuration file (sdk path, etc.)
+local.properties
+
+# Eclipse project files
+.classpath
+.project
+
+# IDE files
+.idea/
+.idea/caches
+.idea/libraries
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/codeStyles/
+.idea/inspectionProfiles/
+.idea/shelf/
+*.iml
+*.ipr
+*.iws
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Kotlin compiler & artifact files
+.kotlin/
+.artifacts/
+*.hprof
+
+# Profiler and build caches
+.externalNativeBuild/
+.cxx/
+captures/
+.net.rim.device.ide.sdk.installer.native_debug/
+.vscode/
