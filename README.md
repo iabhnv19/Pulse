@@ -1,6 +1,6 @@
 <div align="center">
 
-# Pulse ⚡
+# Pulse
 
 ### The heartbeat of your device.
 
