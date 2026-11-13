@@ -309,6 +309,6 @@ Developed By
 
 <div align="center">
 
-**Built with Kotlin and Jetpack Compose for powerful device monitoring and benchmarking.**
+**Built with Kotlin and Jetpack Compose. for powerful device monitoring and benchmarking.**
 
 </div>
