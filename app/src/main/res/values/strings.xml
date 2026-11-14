@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Pulse</string>
+    <string name="accessibility_service_description">Pulse Task Manager uses Accessibility Service to automatically force-stop apps with a single click, providing a Windows-like End Task experience.</string>
 </resources>

@@ -139,7 +139,9 @@ class MainActivity : ComponentActivity() {
                             }
                             ProcessListScreen(
                                 processes = viewModel.runningProcesses,
-                                onRefresh = { viewModel.refreshProcesses() }
+                                onRefresh = { viewModel.refreshProcesses() },
+                                onEndTask = { pkg, pid -> viewModel.endTask(pkg, pid) },
+                                onEndAll = { viewModel.endAllTasks() }
                             )
                         }
                         composable(Screen.Specs.route) {

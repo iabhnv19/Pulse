@@ -478,6 +478,49 @@ class SystemMonitorRepository(private val context: Context) {
     }
 
     /**
+     * End a task: attempts root su force-stop, reflection forceStopPackage, and background process killing.
+     */
+    fun endTask(packageName: String, pid: Int = -1) {
+        try {
+            val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+
+            // 1. Try root `am force-stop` (works if device is rooted)
+            try {
+                val p = Runtime.getRuntime().exec(arrayOf("su", "-c", "am force-stop $packageName"))
+                p.waitFor()
+            } catch (e: Exception) {}
+
+            // 2. Try forceStopPackage via reflection
+            try {
+                val method = am.javaClass.getMethod("forceStopPackage", String::class.java)
+                method.invoke(am, packageName)
+            } catch (e: Exception) {}
+
+            // 3. Kill background processes
+            am.killBackgroundProcesses(packageName)
+
+            // 4. Kill by PID if valid
+            if (pid > 0) {
+                try {
+                    android.os.Process.killProcess(pid)
+                } catch (e: Exception) {}
+            }
+
+            // 5. Remove app from recent tasks / Recents screen
+            am.appTasks?.forEach { task ->
+                try {
+                    val info = task.taskInfo
+                    val basePkg = info?.baseIntent?.component?.packageName
+                    val topPkg = info?.topActivity?.packageName
+                    if (basePkg == packageName || topPkg == packageName) {
+                        task.finishAndRemoveTask()
+                    }
+                } catch (e: Exception) {}
+            }
+        } catch (e: Exception) {}
+    }
+
+    /**
      * Get process memory in bytes.
      * Tries getProcessMemoryInfo() first (works for same-UID processes),
      * then falls back to /proc/[pid]/status (VmRSS) which is readable on most devices.

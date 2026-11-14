@@ -43,6 +43,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var runningProcesses = mutableStateListOf<AppProcess>()
         private set
 
+    private val dismissedPackages = mutableSetOf<String>()
+
     val topProcesses = derivedStateOf {
         runningProcesses.take(5)
     }
@@ -350,7 +352,37 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 repository.getRunningProcesses()
             }
             runningProcesses.clear()
-            runningProcesses.addAll(processes)
+            runningProcesses.addAll(processes.filter { it.packageName !in dismissedPackages })
+        }
+    }
+
+    fun endTask(packageName: String, pid: Int = -1, onComplete: (String) -> Unit = {}) {
+        if (packageName.isNotBlank()) {
+            dismissedPackages.add(packageName)
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.endTask(packageName, pid)
+            withContext(Dispatchers.Main) {
+                runningProcesses.removeAll { it.packageName == packageName || (pid > 0 && it.pid == pid) }
+                onComplete(packageName)
+            }
+        }
+    }
+
+    fun endAllTasks(onComplete: () -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val myPkg = getApplication<Application>().packageName
+            val toKill = runningProcesses.filter { it.packageName.isNotBlank() && it.packageName != myPkg }
+            toKill.forEach { process ->
+                if (process.packageName.isNotBlank()) {
+                    dismissedPackages.add(process.packageName)
+                }
+                repository.endTask(process.packageName, process.pid)
+            }
+            withContext(Dispatchers.Main) {
+                runningProcesses.removeAll { it.packageName != myPkg && it.packageName.isNotBlank() }
+                onComplete()
+            }
         }
     }
 }
