@@ -7,7 +7,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.taskmanager.benchmark.CpuBenchmarkEngine
+import com.example.taskmanager.benchmark.FullDeviceStressTestEngine
 import com.example.taskmanager.benchmark.GpuBenchmarkEngine
+import com.example.taskmanager.benchmark.StressTestResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -23,6 +25,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = SystemMonitorRepository(application)
     private val cpuEngine = CpuBenchmarkEngine()
     private val gpuEngine = GpuBenchmarkEngine()
+    private val stressEngine = FullDeviceStressTestEngine(application)
+
+    // ── Full Device Stress Test state ──────────────────────────────────────────
+    var isStressTesting = mutableStateOf(false)
+        private set
+    var stressTestProgress = mutableStateOf(0f)
+        private set
+    var stressTestPhase = mutableStateOf("")
+        private set
+    var stressTestTimeRemaining = mutableStateOf("02:00")
+        private set
+    var stressTestResult = mutableStateOf<StressTestResult?>(null)
+        private set
 
     var stats = mutableStateOf<SystemStats?>(null)
         private set
@@ -341,6 +356,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } finally {
                 withContext(Dispatchers.Main) {
                     isTestingGpu.value = false
+                }
+            }
+        }
+    }
+
+    fun runFullDeviceStressTest() {
+        if (isStressTesting.value) return
+        viewModelScope.launch {
+            isStressTesting.value = true
+            stressTestResult.value = null
+            stressTestProgress.value = 0f
+            stressTestPhase.value = "Initializing 2-Min Full Device Stress Test..."
+
+            try {
+                val result = stressEngine.runStressTest { phase, progress, timeRemainingSec ->
+                    viewModelScope.launch(Dispatchers.Main) {
+                        stressTestPhase.value = phase
+                        stressTestProgress.value = progress
+                        val mins = timeRemainingSec / 60
+                        val secs = timeRemainingSec % 60
+                        stressTestTimeRemaining.value = String.format(Locale.US, "%02d:%02d", mins, secs)
+                    }
+                }
+                withContext(Dispatchers.Main) {
+                    stressTestResult.value = result
+                    stressTestProgress.value = 1f
+                    stressTestPhase.value = "Stress Test Complete"
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    stressTestPhase.value = "Error: ${e.message}"
+                }
+            } finally {
+                withContext(Dispatchers.Main) {
+                    isStressTesting.value = false
                 }
             }
         }

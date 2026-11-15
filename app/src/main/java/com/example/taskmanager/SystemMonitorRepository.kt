@@ -290,7 +290,7 @@ class SystemMonitorRepository(private val context: Context) {
             val processCount = am.runningAppProcesses?.size ?: 0
             val cpuSpeedGHz  = readCpuCurFreqGHz()
 
-            val gpuMemUsed  = memMap["GpuTotalPages"]?.let { it * 4096L } ?: (usedRam / 8L)
+            val gpuMemUsed  = memMap["GpuTotalPages"]?.let { it * 4096L } ?: memMap["CmaTotal"] ?: (usedRam / 8L)
             val gpuMemTotal = memTotal / 4L
 
             @Suppress("DEPRECATION")
@@ -306,9 +306,9 @@ class SystemMonitorRepository(private val context: Context) {
                 storageTotal        = totalStorage,
                 storageReadSpeed    = readSpeed,
                 storageWriteSpeed   = writeSpeed,
-                gpuUsage3D          = gpuUsage,        // Real Adreno/Mali data
-                gpuUsageCopy        = gpuUsage * 0.3f, // Proxy from 3D usage
-                gpuUsageCompute     = gpuUsage * 0.1f,
+                gpuUsage3D          = gpuUsage,
+                gpuUsageCopy        = gpuUsage,
+                gpuUsageCompute     = gpuUsage,
                 gpuMemoryUsed       = gpuMemUsed,
                 gpuMemoryTotal      = gpuMemTotal,
                 networkSendSpeed    = txSpeed,
@@ -319,8 +319,8 @@ class SystemMonitorRepository(private val context: Context) {
                 signalStrength      = signalStrength,
                 cpuSpeed            = cpuSpeedGHz,
                 processCount        = processCount,
-                threadCount         = processCount * 20,
-                handleCount         = processCount * 300,
+                threadCount         = getRealThreadCount(),
+                handleCount         = getRealHandleCount(),
                 upTime              = uptime,
                 ramCompressed       = memMap["Active(anon)"] ?: 0L,
                 ramCommitted        = memMap["Committed_AS"] ?: usedRam,
@@ -330,10 +330,44 @@ class SystemMonitorRepository(private val context: Context) {
                 ramNonPagedPool     = memMap["SUnreclaim"]   ?: 0L,
                 gpuDedicatedUsed    = gpuMemUsed,
                 gpuDedicatedTotal   = gpuMemTotal,
-                gpuSharedUsed       = usedRam / 8L,
-                gpuSharedTotal      = gpuMemTotal
+                gpuSharedUsed       = (usedRam - gpuMemUsed).coerceAtLeast(0L),
+                gpuSharedTotal      = memTotal - gpuMemTotal
             ))
         }
+    }
+
+    private fun getRealThreadCount(): Int {
+        return try {
+            val procDir = File("/proc")
+            var threads = 0
+            procDir.listFiles()?.forEach { file ->
+                if (file.isDirectory && file.name.all { it.isDigit() }) {
+                    val taskDir = File(file, "task")
+                    if (taskDir.exists() && taskDir.isDirectory) {
+                        threads += taskDir.listFiles()?.size ?: 1
+                    } else {
+                        threads++
+                    }
+                }
+            }
+            if (threads > 0) threads else 80
+        } catch (e: Exception) { 0 }
+    }
+
+    private fun getRealHandleCount(): Int {
+        return try {
+            val procDir = File("/proc")
+            var handles = 0
+            procDir.listFiles()?.forEach { file ->
+                if (file.isDirectory && file.name.all { it.isDigit() }) {
+                    val fdDir = File(file, "fd")
+                    if (fdDir.exists() && fdDir.isDirectory) {
+                        handles += fdDir.listFiles()?.size ?: 0
+                    }
+                }
+            }
+            if (handles > 0) handles else 400
+        } catch (e: Exception) { 0 }
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -369,23 +403,47 @@ class SystemMonitorRepository(private val context: Context) {
             } ?: Build.HARDWARE.uppercase(Locale.US)
         } catch (e: Exception) { Build.HARDWARE.uppercase(Locale.US) }
 
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val activeNet = cm.activeNetwork
+        val caps = cm.getNetworkCapabilities(activeNet)
+        val networkAdapter = when {
+            caps == null -> "No Network Connection"
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi 802.11 Interface"
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "Cellular 5G/LTE Interface"
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet Interface"
+            else -> "Network Interface"
+        }
+
+        val sysGpuModel = listOf(
+            "/sys/class/kgsl/kgsl-3d0/gpu_model",
+            "/sys/class/misc/mali0/device/gpu_model"
+        ).firstNotNullOfOrNull { path ->
+            try {
+                val f = File(path)
+                if (f.exists()) f.readText().trim() else null
+            } catch (e: Exception) { null }
+        }
+
+        val gpuModelName = when {
+            !sysGpuModel.isNullOrBlank() -> sysGpuModel
+            Build.HARDWARE.contains("qcom", true) -> "Qualcomm Adreno GPU"
+            Build.HARDWARE.contains("mtk", true) || Build.HARDWARE.contains("mali", true) -> "ARM Mali GPU"
+            Build.HARDWARE.contains("exynos", true) -> "Samsung Xclipse / Mali GPU"
+            Build.HARDWARE.contains("tensor", true) -> "Google Tensor Mali GPU"
+            else -> "System Graphics (${Build.HARDWARE})"
+        }
+
         return DeviceSpecs(
             processorName   = cpuInfoName,
-            gpuName         = when {
-                Build.HARDWARE.contains("qcom",   true) -> "Qualcomm Adreno GPU"
-                Build.HARDWARE.contains("mtk",    true) -> "ARM Mali GPU"
-                Build.HARDWARE.contains("exynos", true) -> "Samsung Mali GPU"
-                Build.HARDWARE.contains("kirin",  true) -> "HiSilicon Mali GPU"
-                else -> "System Graphics"
-            },
+            gpuName         = gpuModelName,
             totalRam        = totalMem,
             totalStorage    = totalStorage,
             androidVersion  = Build.VERSION.RELEASE,
             modelName       = "${Build.MANUFACTURER} ${Build.MODEL}",
-            networkAdapterName = "Android Network Interface",
+            networkAdapterName = networkAdapter,
             baseSpeed       = baseSpeed,
             sockets         = 1,
-            cores           = cores / 2,
+            cores           = cores,
             logicalProcessors = cores,
             virtualization  = if (Build.SUPPORTED_ABIS.contains("x86_64")) "VT-x" else "ARM Virtualization",
             l1Cache         = cacheSize(0),

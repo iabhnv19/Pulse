@@ -130,7 +130,13 @@ class MainActivity : ComponentActivity() {
                                 diskBenchProgress = viewModel.diskBenchProgress.value,
                                 diskBenchPhase = viewModel.diskBenchPhase.value,
                                 onRunDiskBenchmark = { viewModel.runDiskBenchmark() },
-                                topProcesses = viewModel.topProcesses.value
+                                topProcesses = viewModel.topProcesses.value,
+                                isStressTesting = viewModel.isStressTesting.value,
+                                stressTestProgress = viewModel.stressTestProgress.value,
+                                stressTestPhase = viewModel.stressTestPhase.value,
+                                stressTestTimeRemaining = viewModel.stressTestTimeRemaining.value,
+                                stressTestResult = viewModel.stressTestResult.value,
+                                onRunFullDeviceStressTest = { viewModel.runFullDeviceStressTest() }
                             )
                         }
                         composable(Screen.Processes.route) {
