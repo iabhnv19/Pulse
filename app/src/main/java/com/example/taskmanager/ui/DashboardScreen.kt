@@ -996,6 +996,7 @@ fun StressTestCard(
     )
 
     ExpressiveCard {
+        // Header Row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -1007,12 +1008,12 @@ fun StressTestCard(
                         Icons.Default.LocalFireDepartment,
                         contentDescription = null,
                         tint = fireColor,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         "Device Stress Test",
-                        fontSize = 20.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -1020,7 +1021,7 @@ fun StressTestCard(
                 Text(
                     "2-Min AnTuTu Full Hardware Benchmark",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
             }
             Spacer(Modifier.width(8.dp))
@@ -1028,142 +1029,131 @@ fun StressTestCard(
                 onClick = onRunStressTest,
                 enabled = !isTesting,
                 colors = ButtonDefaults.buttonColors(containerColor = fireColor),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                shape = RoundedCornerShape(12.dp)
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                shape = RoundedCornerShape(10.dp)
             ) {
                 if (isTesting) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(14.dp),
                         color = Color.White,
                         strokeWidth = 2.dp
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(timeRemaining, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 } else {
-                    Icon(Icons.Default.LocalFireDepartment, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.LocalFireDepartment, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Start Test", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    Text("Start", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 }
             }
         }
 
-        // Live test progress
+        // Live progress bar during test
         AnimatedVisibility(visible = isTesting) {
             Column {
-                Spacer(Modifier.height(14.dp))
-                Surface(
-                    color = fireColor.copy(alpha = 0.08f),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(Modifier.padding(14.dp)) {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                phase.ifBlank { "Running 120s stress test…" },
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = fireColor,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Text(
-                                "${(animatedProgress * 100).toInt()}%",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = fireColor
-                            )
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        LinearProgressIndicator(
-                            progress = { animatedProgress },
-                            modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
-                            color = fireColor,
-                            trackColor = fireColor.copy(alpha = 0.15f)
-                        )
-                    }
+                    Text(
+                        phase.ifBlank { "Testing…" },
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = fireColor,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        "${(animatedProgress * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = fireColor
+                    )
                 }
+                Spacer(Modifier.height(6.dp))
+                LinearProgressIndicator(
+                    progress = { animatedProgress },
+                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                    color = fireColor,
+                    trackColor = fireColor.copy(alpha = 0.15f)
+                )
             }
         }
 
-        // Final Benchmark Result Card
+        // Clean, un-nested Benchmark Results directly inside the card!
         AnimatedVisibility(visible = result != null && !isTesting) {
             val res = result ?: return@AnimatedVisibility
             Column {
                 Spacer(Modifier.height(14.dp))
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                    shape = RoundedCornerShape(20.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, fireColor.copy(alpha = 0.35f)),
-                    modifier = Modifier.fillMaxWidth()
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                Spacer(Modifier.height(12.dp))
+
+                // Score + Tier Badge
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    "HARDWARE SCORE",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = fireColor,
-                                    letterSpacing = 1.sp
-                                )
-                                Text(
-                                    text = String.format(Locale.US, "%,d PTS", res.totalScore),
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                            Surface(
-                                color = fireColor,
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Text(
-                                    text = res.tierGrade,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.height(14.dp))
-
-                        // Sub-score breakdown
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            SubScoreBadge(Modifier.weight(1f), "CPU", String.format(Locale.US, "%,d", res.cpuScore))
-                            SubScoreBadge(Modifier.weight(1f), "GPU", String.format(Locale.US, "%,d", res.gpuScore))
-                            SubScoreBadge(Modifier.weight(1f), "RAM", String.format(Locale.US, "%,d", res.memoryScore))
-                            SubScoreBadge(Modifier.weight(1f), "Storage", String.format(Locale.US, "%,d", res.storageScore))
-                        }
-
-                        Spacer(Modifier.height(12.dp))
-
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "Peak Temp: ${String.format(Locale.US, "%.1f", res.peakTempCelsius)}°C",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
-                            Text(
-                                "Stability Rating: ${String.format(Locale.US, "%.1f", res.stabilityRatingPct)}%",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = fireColor
-                            )
-                        }
+                    Column {
+                        Text(
+                            "HARDWARE SCORE",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = fireColor,
+                            letterSpacing = 1.sp
+                        )
+                        Text(
+                            text = String.format(Locale.US, "%,d PTS", res.totalScore),
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
+                    Surface(
+                        color = fireColor.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = res.tierGrade,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = fireColor,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Minimalist Sub-scores (No nested boxes!)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    MinimalSubScore("CPU", formatCompactScore(res.cpuScore))
+                    MinimalSubScore("GPU", formatCompactScore(res.gpuScore))
+                    MinimalSubScore("RAM", formatCompactScore(res.memoryScore))
+                    MinimalSubScore("Storage", formatCompactScore(res.storageScore))
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                // Subtle Temperature & Stability line
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "Peak: ${String.format(Locale.US, "%.1f", res.peakTempCelsius)}°C",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                    Text(
+                        "Stability: ${String.format(Locale.US, "%.1f", res.stabilityRatingPct)}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
                 }
             }
         }
@@ -1171,31 +1161,28 @@ fun StressTestCard(
 }
 
 @Composable
-fun SubScoreBadge(modifier: Modifier = Modifier, label: String, scoreText: String) {
-    Surface(
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-        shape = RoundedCornerShape(10.dp)
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                fontSize = 10.sp,
-                maxLines = 1
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = scoreText,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 11.sp,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+fun MinimalSubScore(label: String, scoreText: String) {
+    Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+        )
+        Text(
+            text = scoreText,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+private fun formatCompactScore(score: Int): String {
+    return if (score >= 1_000_000) {
+        String.format(Locale.US, "%.2fM", score / 1_000_000.0)
+    } else if (score >= 1_000) {
+        String.format(Locale.US, "%.0fK", score / 1000.0)
+    } else {
+        score.toString()
     }
 }
