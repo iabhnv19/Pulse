@@ -25,7 +25,7 @@ Pulse turns device telemetry into a clean, responsive, and expressive dashboard.
 The project is designed around a fast, transparent workflow:
 
 ```text
-Open app -> View dashboard -> Inspect metrics & processes -> Run benchmarks -> Monitor in real time
+Open app -> View dashboard -> Inspect telemetry & battery -> Run 2-min stress test -> Manage tasks
 ```
 
 There is no account system, sign-in flow, advertising SDK, telemetry collection, or external data logging.
@@ -34,42 +34,46 @@ There is no account system, sign-in flow, advertising SDK, telemetry collection,
 
 | Capability | Description |
 |------------|-------------|
-| Real-time dashboard | Live visual monitoring of CPU, RAM, storage, and network statistics |
-| Hardware benchmarking | Dedicated CPU and GPU benchmarking engines to test device performance |
-| Process management | Inspect active app processes, threads, and handle counts |
-| Device specifications | Detailed hardware breakdown of processor, chipset, and memory |
-| Expressive UI cards | Material 3 cards with real-time graphs and smooth animations |
+| Real-time dashboard | Live visual monitoring of CPU, RAM, combined Disk & Storage, and Network statistics |
+| Battery & Thermal telemetry | Real-time battery status, charging speed, voltage, health, °C/°F temperature, and throttling alerts |
+| 2-Min Full Stress Benchmark | 120-second AnTuTu V10-style hardware stress test with live performance curves and stability ratings |
+| Process management | Instant in-app task termination, process memory/thread tracking, and 1-click Auto-Kill service |
+| Bento UI specifications | Minimalist Material 3 Expressive Bento Grid breakdown of CPU, L1/L2/L3 cache, RAM, GPU Vulkan, and storage |
 | Offline workflow | Complete monitoring and benchmarking without account or network access |
 
 ## Features
 
 ### Dashboard & Telemetry
 
-- Real-time CPU usage and frequency monitoring
-- RAM utilization breakdown (used, total, cached, compressed)
-- Storage throughput (read/write speeds) and capacity monitoring
-- Network speeds (upload/download) and Wi-Fi signal details
-- Smooth real-time interactive graphs for live telemetry visualization
+- Real-time CPU usage, core frequencies, system threads, and open handle counts
+- RAM utilization breakdown (used, total, cached, compressed, committed, paged pool)
+- Combined Disk & Storage card with used/free capacity gauge and live flash I/O activity graph
+- Network speeds (upload/download), active interface classification (Wi-Fi, 5G/LTE, Ethernet), and signal details
+- **Live Battery & Thermal Telemetry**: Battery level %, charging speed (*AC Fast Charge / USB / Wireless / Discharging*), voltage (mV), battery health, dual-unit temperature (°C & °F), 60-second thermal trend graph, and thermal throttling state badges (*Optimal / Warm / Throttling Risk*)
 
-### CPU & GPU Benchmarking
+### 2-Min AnTuTu V10 Full Device Extreme Stress Test
 
-- Dedicated CPU benchmark engine to test compute performance
-- GPU benchmark engine covering 3D rendering, copy, and compute workloads
-- Live progress tracking and performance score reporting
-- Stress testing capabilities to evaluate thermal throttling and stability
+- **2-Minute Multi-Stage Benchmark Engine** (`FullDeviceStressTestEngine`):
+  - **Phase 1 (0–30s) — CPU Multi-Core Compute**: Multi-threaded SHA-512 hashing, matrix math, floating-point vector ops, and prime number sieve calculations.
+  - **Phase 2 (30–60s) — GPU Shader & Matrix Stress**: 160×160 3D float matrix dot products and shader compute workloads.
+  - **Phase 3 (60–90s) — RAM Bandwidth & Churn**: 32 MB high-velocity buffer memory allocations with XOR bitwise churn.
+  - **Phase 4 (90–120s) — Flash I/O & Combined Thermal Load**: 10 MB flash block writes with kernel sync (`fdatasync()`) under heavy CPU load.
+- **AnTuTu V10 Normalized Scoring**: Calculates CPU, GPU, RAM, and Storage sub-scores, overall hardware PTS score, tier grade (*S+ Ultra Flagship, S Tier, A Tier, B Tier, C Tier*), peak temperature, and 120s Performance Retention Stability Rating %.
+- **Live Performance Curve**: Renders real-time 120-second output curves during and after the test.
 
-### Process Manager
+### Task Manager
 
-- Comprehensive list of running processes and system applications
-- Thread and handle count tracking per process
-- Resource usage overview for active background tasks
+- Instant in-app task ending with zero page redirection
+- Comprehensive list of running processes with app icons, PID, package name, RAM usage, and CPU%
+- Search bar and multi-criteria sorting (RAM, CPU, Name, I/O)
+- Optional 1-click Auto-Kill via `TaskManagerAccessibilityService`
 
-### Device Specs
+### Material 3 Expressive Bento Grid Specs
 
-- Hardware manufacturer and model identification
-- Processor architecture, core counts, and base clock speeds
-- GPU chipset details and dedicated/shared memory allocation
-- Android OS version and security patch level details
+- **Hero Device Header**: Model name, Android OS version badge, and active network interface
+- **Processor & Architecture**: Core counts, logical threads, base speed, virtualization (VT-x / ARM), and L1/L2/L3 cache sizes
+- **Memory & Storage Bento Cards**: Total RAM, memory speed, form factor, storage technology type, and flash health
+- **GPU & Display**: GPU chipset model, Vulkan API version badge, OpenGL driver version, and physical allocation
 
 ## Quick start
 
@@ -98,8 +102,6 @@ cd Pulse
 5. Select the `app` run configuration.
 6. Press **Run**.
 
-The app starts directly into the system monitoring dashboard. No registration or sign-in is required.
-
 ## Build and test
 
 ### Windows
@@ -116,18 +118,11 @@ Run local unit tests:
 gradlew.bat testDebugUnitTest
 ```
 
-Run all standard verification tasks:
-
-```bat
-gradlew.bat check
-```
-
 ### macOS and Linux
 
 ```bash
 ./gradlew assembleDebug
 ./gradlew testDebugUnitTest
-./gradlew check
 ```
 
 The debug APK is generated at:
@@ -135,41 +130,6 @@ The debug APK is generated at:
 ```text
 app/build/outputs/apk/debug/app-debug.apk
 ```
-
-### Build variants
-
-| Variant | Purpose |
-|---------|---------|
-| `debug` | Local development and device testing |
-| `release` | Optimized release build |
-
-Build a release APK with:
-
-```bash
-./gradlew assembleRelease
-```
-
-For Windows, use `gradlew.bat assembleRelease`.
-
-## How to use
-
-### Monitor system performance
-
-1. Open Pulse.
-2. View the main dashboard for live CPU, RAM, storage, and network stats.
-3. Observe real-time graphs updating as system load changes.
-
-### Run performance benchmarks
-
-1. Navigate to the Benchmark section.
-2. Select either **CPU Benchmark** or **GPU Benchmark**.
-3. Tap **Start Benchmark** and observe live execution metrics.
-4. Review benchmark scores upon completion.
-
-### Inspect device specifications
-
-1. Navigate to the Specs tab.
-2. View detailed hardware specifications including cores, sockets, GPU, and memory limits.
 
 ## Architecture
 
@@ -183,8 +143,10 @@ flowchart TD
     D --> F
     E --> F
     F --> G[SystemMonitorRepository]
-    F --> H[CpuBenchmarkEngine]
-    F --> I[GpuBenchmarkEngine]
+    F --> H[FullDeviceStressTestEngine]
+    F --> I[CpuBenchmarkEngine]
+    F --> J[GpuBenchmarkEngine]
+    D -.-> K[TaskManagerAccessibilityService]
 ```
 
 ### Main responsibilities
@@ -192,96 +154,13 @@ flowchart TD
 | Component | Responsibility |
 |-----------|----------------|
 | `MainActivity` | Sets up window insets and launches Compose UI root |
-| `MainViewModel` | Manages state flows for system stats, processes, and benchmarks |
-| `SystemMonitorRepository` | Gathers live system stats, CPU, GPU, memory, and network telemetry |
-| `CpuBenchmarkEngine` | Executes CPU compute stress tests and calculates performance metrics |
-| `GpuBenchmarkEngine` | Executes 3D rendering and GPU compute benchmarks |
-| `DashboardScreen` | Renders expressive monitoring cards and real-time graphs |
-| `ProcessListScreen` | Displays active processes and thread counts |
-| `SpecsScreen` | Renders detailed hardware specifications |
-
-## Project structure
-
-```text
-Pulse/
-├── app/
-│   ├── build.gradle.kts
-│   └── src/
-│       ├── androidTest/                         # Instrumented Android tests
-│       ├── main/
-│       │   ├── AndroidManifest.xml
-│       │   ├── java/com/example/taskmanager/
-│       │   │   ├── benchmark/                   # CPU and GPU benchmark engines
-│       │   │   ├── ui/                          # Compose screens and expressive cards
-│       │   │   │   ├── components/              # Reusable UI components & real-time graphs
-│       │   │   │   └── theme/                   # Material 3 theme, colors, and typography
-│       │   │   ├── MainActivity.kt              # Root activity
-│       │   │   ├── MainViewModel.kt             # Main state coordinator
-│       │   │   ├── Models.kt                    # Data classes for stats and specs
-│       │   │   └── SystemMonitorRepository.kt   # System telemetry data source
-│       │   └── res/                             # Drawables, icons, and values
-│       └── test/                                # JVM unit tests
-├── gradle/
-│   ├── libs.versions.toml                       # Dependency versions
-│   └── wrapper/                                  # Gradle wrapper files
-├── .github/                                     # Issue templates & PR templates
-├── .gitignore
-├── build.gradle.kts
-├── CODE_OF_CONDUCT.md
-├── CONTRIBUTING.md
-├── LICENSE
-├── README.md
-├── SECURITY.md
-└── settings.gradle.kts
-```
-
-## Dependencies
-
-| Library | Purpose |
-|---------|---------|
-| Jetpack Compose | Declarative Android UI toolkit |
-| Material 3 | Modern UI components and theming |
-| Navigation Compose | Seamless screen navigation |
-| Lifecycle & ViewModel | State management and lifecycle integration |
-| Kotlin Coroutines & Flow | Asynchronous telemetry updates |
-| AndroidX Core & Activity | Platform integration |
-
-## Troubleshooting
-
-<details>
-<summary><b>Gradle says that no Java compiler was found</b></summary>
-
-Install a full JDK rather than a JRE. Confirm that `JAVA_HOME` points to the JDK directory and that `java --version` and `javac --version` work in your terminal.
-</details>
-
-<details>
-<summary><b>Gradle fails with an unsupported Java version</b></summary>
-
-Use a Java version supported by the Android Gradle Plugin and Kotlin tooling. Android Studio's bundled JDK is recommended.
-</details>
-
-<details>
-<summary><b>The app does not install on my device</b></summary>
-
-- Confirm that the device meets minimum SDK requirements (`minSdk = 24`).
-- Enable Developer Options and USB debugging on your device.
-- Ensure the `app` run configuration is selected in Android Studio.
-</details>
-
-<details>
-<summary><b>Benchmarks take time or cause device warm-up</b></summary>
-
-CPU and GPU benchmarks stress hardware components to measure maximum throughput. Extended benchmarking may cause device warming, which is normal behavior.
-</details>
-
-## Known limitations
-
-- Hardware metrics depend on Android system permissions and API availability across device manufacturers.
-- Benchmarks measure relative device performance and may vary based on thermal state and battery level.
-
-## Contributing
-
-Contributions, bug reports, and feature requests are welcome! Please review our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md).
+| `MainViewModel` | Manages state flows for system stats, processes, thermal trends, and benchmarks |
+| `SystemMonitorRepository` | Gathers real-time CPU, GPU, RAM, Disk, Network, and Battery telemetry from Linux procfs/sysfs |
+| `FullDeviceStressTestEngine` | Executes 2-minute multi-stage hardware stress test and computes AnTuTu V10 scores & stability ratings |
+| `TaskManagerAccessibilityService` | Optional accessibility service for 1-click automated Force Stop execution |
+| `DashboardScreen` | Renders performance cards, battery/thermal telemetry, real-time graphs, and 2-min stress test |
+| `ProcessListScreen` | Displays active tasks, thread counts, memory usage, search/sorting, and instant task manager |
+| `SpecsScreen` | Renders hardware breakdown using Material 3 Expressive Bento Grid UI |
 
 ## License
 
@@ -289,8 +168,9 @@ Pulse is released under the [Apache License 2.0](LICENSE).
 
 ## Developer
 
-Developed By
 <div align="center">
+
+Developed By
 
 <table>
   <tr>
@@ -305,10 +185,7 @@ Developed By
     </td>
   </tr>
 </table>
-</div>
 
-<div align="center">
-
-**Built with Kotlin and Jetpack Compose. for powerful device monitoring and benchmarking.**
+**Built with Kotlin and Jetpack Compose for powerful device monitoring and benchmarking.**
 
 </div>
