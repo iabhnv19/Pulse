@@ -51,6 +51,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val diskHistory      = mutableStateListOf<Float>()
     val netSendHistory   = mutableStateListOf<Float>()
     val netReceiveHistory= mutableStateListOf<Float>()
+    val batteryHistory   = mutableStateListOf<Float>()
+    val tempHistory      = mutableStateListOf<Float>()
 
     var deviceSpecs = mutableStateOf<DeviceSpecs?>(null)
         private set
@@ -130,6 +132,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 netReceiveHistory.add(newStats.networkReceiveSpeed.toFloat())
                 if (netReceiveHistory.size > 60) netReceiveHistory.removeAt(0)
+
+                val bStats = newStats.batteryStats
+                if (bStats != null) {
+                    batteryHistory.add(bStats.level.toFloat())
+                    if (batteryHistory.size > 60) batteryHistory.removeAt(0)
+
+                    tempHistory.add(bStats.temperatureC)
+                    if (tempHistory.size > 60) tempHistory.removeAt(0)
+                }
             }
         }
 

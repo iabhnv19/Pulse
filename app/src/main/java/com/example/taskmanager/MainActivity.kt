@@ -115,6 +115,7 @@ class MainActivity : ComponentActivity() {
                                 diskHistory = viewModel.diskHistory,
                                 netSendHistory = viewModel.netSendHistory,
                                 netReceiveHistory = viewModel.netReceiveHistory,
+                                tempHistory = viewModel.tempHistory,
                                 isTestingCpu = viewModel.isTestingCpu.value,
                                 cpuTestResult = viewModel.cpuTestResult.value,
                                 cpuBenchProgress = viewModel.cpuBenchProgress.value,

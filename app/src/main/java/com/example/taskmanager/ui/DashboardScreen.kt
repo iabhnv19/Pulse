@@ -10,9 +10,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatteryChargingFull
+import androidx.compose.material.icons.filled.BatteryStd
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -48,6 +51,7 @@ fun DashboardScreen(
     diskHistory: List<Float>,
     netSendHistory: List<Float>,
     netReceiveHistory: List<Float>,
+    tempHistory: List<Float> = emptyList(),
     isTestingCpu: Boolean,
     cpuTestResult: String,
     cpuBenchProgress: Float,
@@ -166,6 +170,7 @@ fun DashboardScreen(
 
             item {
                 DiskCard(
+                    stats = stats,
                     diskHistory = diskHistory,
                     isTestingDisk = isTestingDisk,
                     diskTestResult = diskTestResult,
@@ -183,34 +188,12 @@ fun DashboardScreen(
                     netReceiveHistory = netReceiveHistory
                 )
             }
-            
+
             item {
-                ExpressiveCard {
-                    Text("Storage Capacity", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    LinearProgressIndicator(
-                        progress = {
-                            if ((stats?.storageTotal ?: 0L) > 0)
-                                (stats?.storageUsed ?: 0L).toFloat() / (stats?.storageTotal ?: 0L)
-                            else 0f
-                        },
-                        modifier = Modifier.fillMaxWidth().height(8.dp),
-                        color = MaterialTheme.colorScheme.tertiary,
-                        trackColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(
-                            "${formatBytes(stats?.storageUsed ?: 0L)} used",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            formatBytes(stats?.storageTotal ?: 0L),
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
+                BatteryThermalCard(
+                    stats = stats,
+                    tempHistory = tempHistory
+                )
             }
         }
     }
@@ -755,6 +738,7 @@ fun DetailColumn(modifier: Modifier, items: List<Pair<String, String>>) {
 
 @Composable
 fun DiskCard(
+    stats: SystemStats?,
     diskHistory: List<Float>,
     isTestingDisk: Boolean,
     diskTestResult: String,
@@ -763,16 +747,33 @@ fun DiskCard(
     onRunDiskBenchmark: () -> Unit
 ) {
     val diskColor = Color(0xFFFD7E14)
-    // Animate the progress bar value
     val animatedProgress by animateFloatAsState(
         targetValue = diskBenchProgress,
         animationSpec = tween(400),
         label = "bench_progress"
     )
 
+    val usedStorage = stats?.storageUsed ?: 0L
+    val totalStorage = stats?.storageTotal ?: 0L
+    val freeStorage = (totalStorage - usedStorage).coerceAtLeast(0L)
+    val usedRatio = if (totalStorage > 0) usedStorage.toFloat() / totalStorage else 0f
+
     ExpressiveCard {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("Disk", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        // Header Row
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f, fill = false)) {
+                Text("Disk & Storage", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "${formatBytes(usedStorage)} used of ${formatBytes(totalStorage)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+            Spacer(Modifier.width(8.dp))
             FilledTonalButton(
                 onClick = onRunDiskBenchmark,
                 enabled = !isTestingDisk,
@@ -792,13 +793,39 @@ fun DiskCard(
             }
         }
 
+        Spacer(Modifier.height(14.dp))
+
+        // Storage Capacity Bar
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Capacity Usage", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+            Text("${(usedRatio * 100).toInt()}%", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.height(6.dp))
+        LinearProgressIndicator(
+            progress = { usedRatio.coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+            color = diskColor,
+            trackColor = diskColor.copy(alpha = 0.2f)
+        )
+        Spacer(Modifier.height(6.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("${formatBytes(usedStorage)} used", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Text("${formatBytes(freeStorage)} free", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        }
+
+        Spacer(Modifier.height(16.dp))
+
         // Live I/O activity graph
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Active time", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Text("Active Flash I/O", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             Text("${if (isTestingDisk) "100" else "0"}%", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         }
         Spacer(modifier = Modifier.height(4.dp))
-        RealTimeGraph(data = diskHistory, color = diskColor, modifier = Modifier.height(100.dp))
+        RealTimeGraph(data = diskHistory, color = diskColor, modifier = Modifier.height(90.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("60 seconds", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
             Text("0", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
@@ -980,6 +1007,146 @@ fun formatBytes(bytes: Long): String {
 }
 
 @Composable
+fun BatteryThermalCard(
+    stats: SystemStats?,
+    tempHistory: List<Float>
+) {
+    val bStats = stats?.batteryStats
+    val level = bStats?.level ?: 80
+    val isCharging = bStats?.isCharging ?: false
+    val chargeType = bStats?.chargeType ?: "Discharging"
+    val tempC = bStats?.temperatureC ?: 32.0f
+    val tempF = bStats?.temperatureF ?: 89.6f
+    val voltage = bStats?.voltageMv ?: 4000
+    val health = bStats?.health ?: "Good"
+    val thermalStatus = bStats?.thermalStatus ?: "Optimal"
+
+    val thermalColor = when {
+        tempC >= 43.0f -> Color(0xFFEF5350) // Red
+        tempC >= 36.0f -> Color(0xFFFF9800) // Orange
+        else -> Color(0xFF28A745)          // Green
+    }
+
+    ExpressiveCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text("Battery & Thermal", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    if (isCharging) "$chargeType • $level%" else "$chargeType • $level%",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        // Level & Temp Dual Gauge Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Battery Level Column
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryStd,
+                            contentDescription = null,
+                            tint = if (isCharging) Color(0xFF28A745) else MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text("Battery Level", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    }
+                    Text("$level%", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.height(6.dp))
+                LinearProgressIndicator(
+                    progress = { (level / 100f).coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                    color = if (isCharging) Color(0xFF28A745) else MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            }
+
+            // Temperature Column
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.LocalFireDepartment,
+                            contentDescription = null,
+                            tint = thermalColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text("Temperature", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    }
+                    Text(
+                        String.format(Locale.US, "%.1f°C", tempC),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = thermalColor
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+                LinearProgressIndicator(
+                    progress = { ((tempC - 20f) / 30f).coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                    color = thermalColor,
+                    trackColor = thermalColor.copy(alpha = 0.15f)
+                )
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        // Live Thermal History Graph
+        Text("Thermal trend (60s)", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+        Spacer(Modifier.height(4.dp))
+        RealTimeGraph(data = tempHistory, color = thermalColor, modifier = Modifier.height(50.dp))
+
+        Spacer(Modifier.height(12.dp))
+
+        // Technical details row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "Voltage: ${voltage} mV",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+            Text(
+                "Fahrenheit: ${String.format(Locale.US, "%.1f", tempF)}°F",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+            Text(
+                "Health: $health",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
 fun StressTestCard(
     isTesting: Boolean,
     progress: Float,
@@ -1019,7 +1186,7 @@ fun StressTestCard(
                     )
                 }
                 Text(
-                    "2-Min AnTuTu Full Hardware Benchmark",
+                    "Full Hardware Benchmark",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )

@@ -1,5 +1,17 @@
 package com.example.taskmanager
 
+data class BatteryStats(
+    val level: Int,
+    val isCharging: Boolean,
+    val chargeType: String,
+    val temperatureC: Float,
+    val temperatureF: Float,
+    val voltageMv: Int,
+    val health: String,
+    val technology: String,
+    val thermalStatus: String
+)
+
 data class SystemStats(
     val cpuUsage: Float,
     val ramUsed: Long,
@@ -33,7 +45,8 @@ data class SystemStats(
     val gpuDedicatedUsed: Long,
     val gpuDedicatedTotal: Long,
     val gpuSharedUsed: Long,
-    val gpuSharedTotal: Long
+    val gpuSharedTotal: Long,
+    val batteryStats: BatteryStats? = null
 )
 
 data class DeviceSpecs(
