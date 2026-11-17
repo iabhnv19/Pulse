@@ -26,13 +26,14 @@ data class StressTestResult(
     val stabilityRatingPct: Float,
     val peakTempCelsius: Float,
     val tierGrade: String,
-    val summary: String
+    val summary: String,
+    val performanceHistory: List<Float> = emptyList()
 )
 
 class FullDeviceStressTestEngine(private val context: Context) {
 
     suspend fun runStressTest(
-        onProgress: (phase: String, progress: Float, timeRemainingSec: Int) -> Unit
+        onProgress: (phase: String, progress: Float, timeRemainingSec: Int, currentHistory: List<Float>) -> Unit
     ): StressTestResult = withContext(Dispatchers.Default) {
         val totalDurationSec = 120
         val cores = Runtime.getRuntime().availableProcessors()
@@ -46,6 +47,7 @@ class FullDeviceStressTestEngine(private val context: Context) {
         var finalCpuPerf = 0.0
 
         val startTemp = getBatteryTemperature()
+        val perfHistory = mutableListOf<Float>()
 
         // ══════════════════════════════════════════════════════════════════════
         // 2-MINUTE EXTREME MULTI-STAGE HEAVY BENCHMARK (120 SECONDS)
@@ -61,51 +63,55 @@ class FullDeviceStressTestEngine(private val context: Context) {
                 else      -> "Phase 4/4: Flash Block I/O Sync & Maximum Thermal Load"
             }
 
-            onProgress(phaseName, progress, timeRemaining)
-
             val passStartMs = SystemClock.elapsedRealtime()
             val passDeadlineMs = passStartMs + 1000L
+            var secOps = 0L
 
             when {
                 // ── PHASE 1: HEAVY CPU WORKLOAD (0-30s) ───────────────────────
                 sec < 30 -> {
-                    var passOps = 0L
                     while (SystemClock.elapsedRealtime() < passDeadlineMs) {
-                        passOps += runCpuWorkload(cores)
+                        val ops = runCpuWorkload(cores)
+                        secOps += ops
                     }
-                    cpuOpsCount += passOps
-                    if (sec == 3) initialCpuPerf = passOps.toDouble()
-                    if (sec == 28) finalCpuPerf = passOps.toDouble()
+                    cpuOpsCount += secOps
+                    if (sec == 3) initialCpuPerf = secOps.toDouble()
+                    if (sec == 28) finalCpuPerf = secOps.toDouble()
                 }
 
                 // ── PHASE 2: HEAVY GPU WORKLOAD (30-60s) ──────────────────────
                 sec < 60 -> {
-                    var passGpuOps = 0L
                     while (SystemClock.elapsedRealtime() < passDeadlineMs) {
-                        passGpuOps += runGpuWorkload()
+                        val ops = runGpuWorkload()
+                        secOps += ops
                     }
-                    gpuOpsCount += passGpuOps
+                    gpuOpsCount += secOps
                 }
 
                 // ── PHASE 3: HEAVY RAM WORKLOAD (60-90s) ──────────────────────
                 sec < 90 -> {
-                    var passMemBytes = 0L
                     while (SystemClock.elapsedRealtime() < passDeadlineMs) {
-                        passMemBytes += runRamWorkload()
+                        val bytes = runRamWorkload()
+                        secOps += bytes / 1024L
                     }
-                    memBytesProcessed += passMemBytes
+                    memBytesProcessed += secOps * 1024L
                 }
 
                 // ── PHASE 4: FLASH STORAGE & COMBINED EXTREME LOAD (90-120s) ──
                 else -> {
-                    var passStorageBytes = 0L
                     while (SystemClock.elapsedRealtime() < passDeadlineMs) {
-                        passStorageBytes += runStorageWorkload()
+                        val bytes = runStorageWorkload()
+                        secOps += bytes / 1024L
                         cpuOpsCount += runCpuWorkload((cores / 2).coerceAtLeast(2))
                     }
-                    storageBytesProcessed += passStorageBytes
+                    storageBytesProcessed += secOps * 1024L
                 }
             }
+
+            val intensity = (secOps.toFloat() / 200_000f).coerceIn(0.15f, 1.0f)
+            perfHistory.add(intensity)
+
+            onProgress(phaseName, progress, timeRemaining, perfHistory.toList())
 
             val remainingInSec = passDeadlineMs - SystemClock.elapsedRealtime()
             if (remainingInSec > 0) {
@@ -113,7 +119,7 @@ class FullDeviceStressTestEngine(private val context: Context) {
             }
         }
 
-        onProgress("Calibrating AnTuTu V10 Benchmarks & Thermal Retention…", 1.0f, 0)
+        onProgress("Calibrating AnTuTu V10 Benchmarks & Thermal Retention…", 1.0f, 0, perfHistory.toList())
 
         // ══════════════════════════════════════════════════════════════════════
         // SCORE CALCULATION (AnTuTu V10 Standard Normalization Scale)
@@ -153,7 +159,8 @@ class FullDeviceStressTestEngine(private val context: Context) {
             stabilityRatingPct = stabilityRating,
             peakTempCelsius = peakTemp,
             tierGrade = tierGrade,
-            summary = summary
+            summary = summary,
+            performanceHistory = perfHistory.toList()
         )
     }
 

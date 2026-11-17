@@ -38,6 +38,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var stressTestResult = mutableStateOf<StressTestResult?>(null)
         private set
+    val stressTestHistory = mutableStateListOf<Float>()
 
     var stats = mutableStateOf<SystemStats?>(null)
         private set
@@ -378,13 +379,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             isStressTesting.value = true
             stressTestResult.value = null
             stressTestProgress.value = 0f
+            stressTestHistory.clear()
             stressTestPhase.value = "Initializing 2-Min Full Device Stress Test..."
 
             try {
-                val result = stressEngine.runStressTest { phase, progress, timeRemainingSec ->
+                val result = stressEngine.runStressTest { phase, progress, timeRemainingSec, currentHistory ->
                     viewModelScope.launch(Dispatchers.Main) {
                         stressTestPhase.value = phase
                         stressTestProgress.value = progress
+                        stressTestHistory.clear()
+                        stressTestHistory.addAll(currentHistory)
                         val mins = timeRemainingSec / 60
                         val secs = timeRemainingSec % 60
                         stressTestTimeRemaining.value = String.format(Locale.US, "%02d:%02d", mins, secs)

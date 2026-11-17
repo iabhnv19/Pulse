@@ -73,6 +73,7 @@ fun DashboardScreen(
     stressTestPhase: String = "",
     stressTestTimeRemaining: String = "02:00",
     stressTestResult: StressTestResult? = null,
+    stressTestHistory: List<Float> = emptyList(),
     onRunFullDeviceStressTest: () -> Unit = {},
 ) {
     var expandedCard by remember { mutableStateOf<String?>(null) }
@@ -100,6 +101,7 @@ fun DashboardScreen(
                     phase = stressTestPhase,
                     timeRemaining = stressTestTimeRemaining,
                     result = stressTestResult,
+                    history = stressTestHistory,
                     onRunStressTest = onRunFullDeviceStressTest
                 )
             }
@@ -1058,13 +1060,6 @@ fun BatteryThermalCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            if (isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryStd,
-                            contentDescription = null,
-                            tint = if (isCharging) Color(0xFF28A745) else MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
                         Text("Battery Level", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                     }
                     Text("$level%", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
@@ -1086,13 +1081,6 @@ fun BatteryThermalCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.LocalFireDepartment,
-                            contentDescription = null,
-                            tint = thermalColor,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
                         Text("Temperature", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                     }
                     Text(
@@ -1153,6 +1141,7 @@ fun StressTestCard(
     phase: String,
     timeRemaining: String,
     result: StressTestResult?,
+    history: List<Float> = emptyList(),
     onRunStressTest: () -> Unit
 ) {
     val fireColor = Color(0xFFFF6D00)
@@ -1215,7 +1204,7 @@ fun StressTestCard(
             }
         }
 
-        // Live progress bar during test
+        // Live progress bar & real-time performance graph during test
         AnimatedVisibility(visible = isTesting) {
             Column {
                 Spacer(Modifier.height(12.dp))
@@ -1245,10 +1234,15 @@ fun StressTestCard(
                     color = fireColor,
                     trackColor = fireColor.copy(alpha = 0.15f)
                 )
+
+                Spacer(Modifier.height(10.dp))
+                Text("Live Benchmark Output Curve", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                Spacer(Modifier.height(4.dp))
+                RealTimeGraph(data = history, color = fireColor, modifier = Modifier.height(65.dp))
             }
         }
 
-        // Clean, un-nested Benchmark Results directly inside the card!
+        // Clean Benchmark Results + Performance Curve
         AnimatedVisibility(visible = result != null && !isTesting) {
             val res = result ?: return@AnimatedVisibility
             Column {
@@ -1291,9 +1285,18 @@ fun StressTestCard(
                     }
                 }
 
+                // Benchmark Performance Curve Graph
+                val graphData = res.performanceHistory.ifEmpty { history }
+                if (graphData.isNotEmpty()) {
+                    Spacer(Modifier.height(10.dp))
+                    Text("120s Benchmark Performance Curve", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    Spacer(Modifier.height(4.dp))
+                    RealTimeGraph(data = graphData, color = fireColor, modifier = Modifier.height(65.dp))
+                }
+
                 Spacer(Modifier.height(12.dp))
 
-                // Minimalist Sub-scores (No nested boxes!)
+                // Minimalist Sub-scores
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween

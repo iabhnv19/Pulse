@@ -137,6 +137,7 @@ class MainActivity : ComponentActivity() {
                                 stressTestPhase = viewModel.stressTestPhase.value,
                                 stressTestTimeRemaining = viewModel.stressTestTimeRemaining.value,
                                 stressTestResult = viewModel.stressTestResult.value,
+                                stressTestHistory = viewModel.stressTestHistory,
                                 onRunFullDeviceStressTest = { viewModel.runFullDeviceStressTest() }
                             )
                         }
